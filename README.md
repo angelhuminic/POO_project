@@ -3,8 +3,15 @@ proiect_programare_orientata_pe_obiect
 
 
 
-Nume proiect: Proiect_POO_HuminicAngel_141
-Tema aleasa: Management showroom automobile
+Nume proiect: 
+
+        Proiect_POO_HuminicAngel_141
+
+
+
+Tema aleasa: 
+
+        Management showroom automobile
 
 
 Clase implementate:
