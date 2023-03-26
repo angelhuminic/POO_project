@@ -333,6 +333,7 @@ int main()
 {
     /// Creez un showroom (ii dam numele aici)
     Showroom showroom("BMW M Romania");
+    
     /// Apoi adaug masini in showroom
     Masina masina1("BMW", "M2", 2017, 51000);
     Masina masina2("BMW", "M2 Competition", 2016, 55000);
