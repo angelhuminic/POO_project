@@ -1,55 +1,127 @@
 #include <iostream>
 #include <cstring>
+#include <exception>
 
 using namespace std;
 
-/// Clasa pentru masina
-class Masina
+/// Clasa pentru exceptie custom
+class CarException : public exception
 {
-private:
+    virtual const char* what() const throw()
+    {
+        return "CarException occurred!";
+    }
+};
+
+/// Clasa pentru exceptie custom pentru cand nu gasim o masina in showroom
+class CarNotFoundException : public exception
+{
+public:
+    virtual const char* what() const throw()
+    {
+        return "Car not found!";
+    }
+};
+
+/// Clasa de baza abstracta
+class Automobil
+{
+protected:
     char marca[50];
     char model[50];
     int an_de_fabricatie;
-    double pret;
 public:
-    Masina()
+    Automobil()
     {
-        marca[0] = '\0';
-        model[0] = '\0';
-        an_de_fabricatie = 0;
-        pret = 0.0;
+
     }
-    ///Constructor de copiere
-    Masina(char* marca, char* model, int an_de_fabricatie, double pret)
+
+    Automobil(const char* marca, const char* model, int an_de_fabricatie)
     {
         strcpy(this->marca, marca);
         strcpy(this->model, model);
         this->an_de_fabricatie = an_de_fabricatie;
-        this->pret = pret;
     }
 
-    Masina(const Masina& masina)
+    virtual void afisare()=0; /// metoda virtuala
+
+    virtual double getPret()=0; /// metoda virtuala
+
+    virtual ~Automobil() /// destructor virtual
     {
-        strcpy(marca, masina.marca);
-        strcpy(model, masina.model);
-        an_de_fabricatie = masina.an_de_fabricatie;
-        pret = masina.pret;
+
+    }
+};
+
+/// Clasa interfata
+class MesajAfisat
+{
+public:
+    virtual void afisare2()=0; /// metoda virtuala
+
+    virtual ~MesajAfisat() /// destructor virtual
+    {
+
+    }
+};
+
+/// Clasa interfata 2
+class AltAutomobil
+{
+public:
+    virtual ~AltAutomobil()
+    {
+
+    }
+    virtual void start()=0;
+
+    virtual void stop()=0;
+};
+
+/// Clasa pentru un sistem Start/Stop care se foloseste de interfata de AltAutomobil
+class Start_Stop : public AltAutomobil
+{
+public:
+    void start()
+    {
+        cout << "Car started" << endl;
     }
 
-    ///Getteri
-    char* getMarca()
+    void stop()
     {
-        return marca;
+        cout << "Car stopped" << endl;
+    }
+};
+
+/// Clasa pentru masina care mosteneste clasa Automobil si implementeaza clasa MesajAfisat
+class Masina : public Automobil, public MesajAfisat
+{
+private:
+    double pret;
+public:
+    Masina()
+    {
+
     }
 
-    char* getModel()
+    Masina(const char* marca,const char* model,int an_de_fabricatie,double pret) : Automobil(marca,model,an_de_fabricatie)
     {
-        return model;
+        this->pret=pret;
     }
 
-    int getAndefabricatie()
+    void afisare()
     {
-        return an_de_fabricatie;
+        cout<<"Marca: "<<marca;
+        cout<<endl;
+
+        cout<<"Model: "<<model;
+        cout<<endl;
+
+        cout<<"An de fabricatie: "<<an_de_fabricatie;
+        cout<<endl;
+
+        cout<<"Pret: "<<pret<<"$ ";
+        cout<<endl;
     }
 
     double getPret()
@@ -57,37 +129,20 @@ public:
         return pret;
     }
 
-    ///Settari
-    void setMarca(char* marca)
+    void afisare2()
     {
-        strcpy(this->marca, marca);
+        cout<<"This is a car"<<endl;
     }
 
-    void setModel(char* model)
+    /*
+    double getPrice()
     {
-        strcpy(this->model, model);
+        return pret;
     }
-
-    void setAndefabricatie(int an_de_fabricatie)
+    */
+    void setPrice(double pret)
     {
-        this->an_de_fabricatie = an_de_fabricatie;
-    }
-
-    void setPret(double pret)
-    {
-        this->pret = pret;
-    }
-
-    void afisare() const
-    {
-        cout << "Marca: " << marca;
-        cout << endl;
-        cout << "Model: " << model;
-        cout << endl;
-        cout << "An de fabricatie: " << an_de_fabricatie;
-        cout << endl;
-        cout << "Pret: " << pret << "$ ";
-        cout << endl;
+        this->pret=pret;
     }
 };
 
@@ -96,64 +151,57 @@ class Showroom
 {
 private:
     char nume[50];
-    Masina masini[100];
-    int numar_masini;
+    int nr_masini;
+    Masina* masini[100];
+    static int totalNumCars;
 public:
     Showroom()
     {
-        nume[0] = '\0';
-        numar_masini = 0;
+
     }
 
-    Showroom(char* nume)
+    Showroom(const char* nume)
     {
         strcpy(this->nume, nume);
-        numar_masini = 0;
+        nr_masini=0;
     }
 
-    char* getNume()
+    void adaugare_masina(Masina* masina)
     {
-        return nume;
-    }
-
-    void setNume(char* nume)
-    {
-        strcpy(this->nume, nume);
-    }
-
-    void adaugare_masina(const Masina& masinii)
-    {
-        if (numar_masini < 100)
-        {
-            masini[numar_masini++] = masinii;
-        }
+        masini[nr_masini++]=masina;
+        totalNumCars++;
     }
 
     double getPretTotalMasiniNet()
     {
-        double prettotal = 0.0;
-        for (int i = 0; i < numar_masini; i++)
+        double prettotal=0.0;
+        for (int i=0;i<nr_masini;i++)
         {
-            prettotal += masini[i].getPret();
+            prettotal+=masini[i]->getPret();
         }
         return prettotal;
     }
 
     double getPretTotalMasiniBrut(double procentTVA)
     {
-        double prettotal = getPretTotalMasiniNet();
-        return prettotal * (1 + procentTVA);
+        double prettotal=getPretTotalMasiniNet();
+        return prettotal*(1+procentTVA);
     }
 
     void afisareMasini()
     {
-        cout << "Masini in stocul " << nume << ":" << endl;
-        cout << endl;
-        for (int i = 0; i < numar_masini; i++)
+        cout<<"Masini in stocul "<<nume<<":"<<endl;
+        cout<<endl;
+        for(int i=0;i<nr_masini;i++)
         {
-            masini[i].afisare();
+            masini[i]->afisare();
             cout << endl;
         }
+    }
+
+    static int getTotalNumCars()
+    {
+        return totalNumCars;
     }
 };
 
@@ -163,28 +211,35 @@ class Cumparator
 private:
     char nume[50];
     char adresa[50];
+    char numar_de_telefon[15];
 public:
     Cumparator()
     {
-        nume[0] = '\0';
-        adresa[0] = '\0';
+
     }
 
-    Cumparator(char* nume, char* adresa)
+    Cumparator(char* _nume,char* _adresa,char* _numar_de_telefon)
     {
-        strcpy(this->nume, nume);
-        strcpy(this->adresa, adresa);
+        strcpy(nume, _nume);
+        strcpy(adresa, _adresa);
+        strcpy(numar_de_telefon, _numar_de_telefon);
     }
 
-    Cumparator(const Cumparator& cumparator)
+    Cumparator(const Cumparator& other)
     {
-        strcpy(nume, cumparator.nume);
-        strcpy(adresa,cumparator.adresa);
+        strcpy(nume, other.nume);
+        strcpy(adresa, other.adresa);
+        strcpy(numar_de_telefon, other.numar_de_telefon);
     }
 
     char* getNume()
     {
         return nume;
+    }
+
+    void setNume(char* _nume)
+    {
+        strcpy(nume, _nume);
     }
 
     char* getAdresa()
@@ -192,14 +247,31 @@ public:
         return adresa;
     }
 
-    void setNume(char* nume)
+    void setAdresa(char* _adresa)
     {
-        strcpy(this->nume, nume);
+        strcpy(adresa, _adresa);
     }
 
-    void setAdresa(char* adresa)
+    char* getNumardetelefon()
     {
-        strcpy(this->adresa, adresa);
+        return numar_de_telefon;
+    }
+
+    void setNumardetelefon(char* _numar_de_telefon)
+    {
+        strcpy(numar_de_telefon, _numar_de_telefon);
+    }
+
+    void display() const
+    {
+        cout<<"Nume: "<<nume;
+        cout<<endl;
+
+        cout<<"Adresa: "<<adresa;
+        cout<<endl;
+
+        cout<<"Numar de telefon: "<<numar_de_telefon;
+        cout<<endl;
     }
 };
 
@@ -207,133 +279,103 @@ public:
 class Vanzator
 {
 private:
-    char nume[20];
+    char nume[50];
+    char numar_de_telefon[20];
+    int nr_vanzari_facute;
 public:
     Vanzator()
     {
-        nume[0] = '\0';
+
     }
 
-    Vanzator(char nume[])
+    Vanzator(const char* nume,const char* numar_de_telefon)
     {
         strcpy(this->nume, nume);
+        strcpy(this->numar_de_telefon, numar_de_telefon);
+        nr_vanzari_facute=0;
     }
 
-    char* getNume()
+    void afisare()
     {
-        return nume;
+        cout<<"Nume: "<<nume;
+        cout<<endl;
+
+        cout<<"Numar de telefon: "<<numar_de_telefon;
+        cout<<endl;
+
+        cout<<"Vanzari incheiate: "<<nr_vanzari_facute;
+        cout<<endl;
     }
 
-    void setNume(char nume[])
+    int getNrVanzari()
     {
-        strcpy(this->nume, nume);
+        return nr_vanzari_facute;
     }
 
-    void display() const
+    void setNrVanzari(int nr_vanzari_facute)
     {
-        cout << "Nume: " << nume << endl;
+        this->nr_vanzari_facute=nr_vanzari_facute;
     }
 };
 
-/// Clasa pentru detalii cumparare masina
-class Tranzactieefectuata
+/// Clasa pentru detalii cumparare masina care mosteneste clasa Automobil
+class Tranzactieefectuata : public Automobil
 {
 private:
-    Cumparator cumparator;
-    Masina masina;
-    Vanzator vanzator;
+    char nume_cumparator[50];
+    char nume_vanzator[50];
     double pretplatitdupadiscounturi;
 public:
-    Tranzactieefectuata(const Cumparator& cumparator, const Masina& masina, const Vanzator& vanzator, double pretplatitdupadiscounturi)
+    Tranzactieefectuata()
     {
-        this->cumparator = cumparator;
-        this->masina = masina;
-        this->vanzator = vanzator;
-        this->pretplatitdupadiscounturi = pretplatitdupadiscounturi;
-    }
-    Cumparator getCumparator()
-    {
-        return cumparator;
+
     }
 
-    Masina getMasina()
+    Tranzactieefectuata(const char* marca, const char* model, int an_de_fabricatie, const char* nume_cumparator, const char* nume_vanzator, double pretplatitdupadiscounturi) : Automobil(marca, model, an_de_fabricatie)
     {
-        return masina;
-    }
-
-    Vanzator getVanzator() const
-    {
-        return vanzator;
-    }
-
-    double getPretplatitdupadiscounturi()
-    {
-        return pretplatitdupadiscounturi;
-    }
-
-    void setMasina(const Masina& masina)
-    {
-        this->masina = masina;
-    }
-
-    void setCumparator(const Cumparator& cumparator)
-    {
-        this->cumparator = cumparator;
-    }
-
-    void setVanzator(const Vanzator& vanzator)
-    {
-        this->vanzator = vanzator;
-    }
-
-    void setPretplatitdupadiscounturi(double pretplatitdupadiscounturi)
-    {
+        strcpy(this->nume_cumparator, nume_cumparator);
+        strcpy(this->nume_vanzator, nume_vanzator);
         this->pretplatitdupadiscounturi = pretplatitdupadiscounturi;
     }
 
     void afisare()
     {
-        cout << "DETALIILE TRANZACTIEI:" << endl;
-        cout << endl;
+        cout<<"DETALIILE TRANZACTIEI:"<<endl;
+        cout<<endl;
 
-        cout << "Nume vanzator:" << endl;
-        cout << vanzator.getNume() << endl;
-        cout << endl;
+        cout<<"Marca: "<<marca;
+        cout<<endl;
 
-        cout << "Nume Cumparator: " << endl;
-        cout << cumparator.getNume() << endl;
-        cout << endl;
+        cout<<"Model: "<<model;
+        cout<<endl;
 
-        cout << "Adresa cumparator: " << endl;
-        cout << cumparator.getAdresa() << endl;
-        cout << endl;
+        cout<<"An de fabricatie: "<<an_de_fabricatie;
+        cout<<endl;
 
-        cout << "Marca masinii: " << endl;
-        cout << masina.getMarca() << endl;
-        cout << endl;
+        cout<<"Nume Client: "<<nume_cumparator;
+        cout<<endl;
 
-        cout << "Model masina: " << endl;
-        cout << masina.getModel() << endl;
-        cout << endl;
+        cout<<"Nume Vanzator: "<<nume_vanzator;
+        cout<<endl;
 
-        cout << "An de fabricatie al masini: " << endl;
-        cout << masina.getAndefabricatie() << endl;
-        cout << endl;
+        cout<<"Sale Price: "<<pretplatitdupadiscounturi;
+        cout<<endl;
+    }
 
-        cout << "Pret al masinii:" << endl;
-        cout << masina.getPret() << "$ " << endl;
-        cout << endl;
-
-        cout << "Pret platit de cumparator: " << endl;
-        cout << pretplatitdupadiscounturi << "$ " << endl;
+    double getPret()
+    {
+        return pretplatitdupadiscounturi;
     }
 };
+
+/// Variabila membru statica pentru clasa Showroom
+int Showroom::totalNumCars=0;
 
 int main()
 {
     /// Creez un showroom (ii dam numele aici)
     Showroom showroom("BMW M Romania");
-    
+
     /// Apoi adaug masini in showroom
     Masina masina1("BMW", "M2", 2017, 51000);
     Masina masina2("BMW", "M2 Competition", 2016, 55000);
@@ -351,50 +393,129 @@ int main()
     Masina masina14("BMW", "X6M", 2021, 99500);
     Masina masina15("BMW", "X6M", 2023, 161200);
 
-
-    showroom.adaugare_masina(masina1);
-    showroom.adaugare_masina(masina2);
-    showroom.adaugare_masina(masina3);
-    showroom.adaugare_masina(masina4);
-    showroom.adaugare_masina(masina5);
-    showroom.adaugare_masina(masina6);
-    showroom.adaugare_masina(masina7);
-    showroom.adaugare_masina(masina8);
-    showroom.adaugare_masina(masina9);
-    showroom.adaugare_masina(masina10);
-    showroom.adaugare_masina(masina11);
-    showroom.adaugare_masina(masina12);
-    showroom.adaugare_masina(masina13);
-    showroom.adaugare_masina(masina14);
-    showroom.adaugare_masina(masina15);
-
+    showroom.adaugare_masina(&masina1);
+    showroom.adaugare_masina(&masina2);
+    showroom.adaugare_masina(&masina3);
+    showroom.adaugare_masina(&masina4);
+    showroom.adaugare_masina(&masina5);
+    showroom.adaugare_masina(&masina6);
+    showroom.adaugare_masina(&masina7);
+    showroom.adaugare_masina(&masina8);
+    showroom.adaugare_masina(&masina9);
+    showroom.adaugare_masina(&masina10);
+    showroom.adaugare_masina(&masina11);
+    showroom.adaugare_masina(&masina12);
+    showroom.adaugare_masina(&masina13);
+    showroom.adaugare_masina(&masina14);
+    showroom.adaugare_masina(&masina15);
 
     ///Si le afisez
     showroom.afisareMasini();
-    cout << endl;
+    cout<<endl;
 
-    /// Aici calculez cat costa toate masiniile care sunt in showroom(pret Net)
-    double prettotal = showroom.getPretTotalMasiniNet();
-    cout << "MASINI DISPONIBILE PENTRU A FI CUMPARATE:"<<endl;
-    cout << endl;
-    cout << "Pret total al masiniilor din showroom(Net): " << prettotal << "$ " << endl;
+    cout << "Numar total de masini in stoc: " << Showroom::getTotalNumCars() << endl;
+
+    double prettotal=showroom.getPretTotalMasiniNet();
+    cout<<endl;
+    cout<<"Pret total al masiniilor din showroom(Net): "<<prettotal<<"$ "<<endl;
 
     /// Aici calculez cat costa toate masiniile care sunt in showroom(pret Brut(adica cu TVA))
-    double procentTVA = 0.19; // 19% TVA
-    double prettotalcuTVA = showroom.getPretTotalMasiniBrut(procentTVA);
-    cout << "Pret total al masiniilor din showroom(Brut): " << prettotalcuTVA << "$ " << endl;
-    cout<<endl;
-    cout << endl;
+    double procentTVA=0.19; // 19% TVA
+    double prettotalcuTVA=showroom.getPretTotalMasiniBrut(procentTVA);
+    //cout << "Total price of cars: " << showroom.getPretTotalMasiniNet() << "$ " << endl;
+    cout<<"Pret total al masiniilor din showroom(Brut): "<<prettotalcuTVA<<"$ "<<endl;
 
     /// Creez un cumparator
-    Cumparator cumparator("Andrei Victor", "Strada Nr. 1");
-    Vanzator vanzator("Alex Ion");
+    Cumparator cumparator("Andrei Victor","Strada Nr. 1", "111111");
+    cout<<endl;
+
+    /// Creez un vanzator
+    Vanzator vanzator("Alex Ion", "222222");
+    cout<<endl;
 
     /// Introduc datele pentru o tranzactie
-    Tranzactieefectuata tranzactie(cumparator,masina4, vanzator, 197000);
+    Tranzactieefectuata tranzactie("BMW", "M4 CSL", 2022, "Andrei Victor", "Alex Ion", 197000);
+    cout<<endl;
 
-    /// Si le afisez
+
+    //cout << "Cars in inventory: " << endl;
+    //showroom.afisareMasini();
+
+    cout<<"Detalii cumparator: "<<endl;
+    cout<<endl;
+    cumparator.display();
+    cout<<endl;
+
+    cout<<"Detalii vanzator: "<<endl;
+    cout<<endl;
+    vanzator.afisare();
+    cout<<endl;
+
     tranzactie.afisare();
+    cout<<endl;
+
+    /// Cream un sistem de start/stop care foloseste interfata de AltAutomobil
+    Start_Stop sistemstartstop;
+
+    /// Folosim sistemul de Start/Stop al masinii, care foloseste interfata de AltAutomobil
+    sistemstartstop.start();
+    sistemstartstop.stop();
+    cout<<endl;
+
+    /// Exceptii
+    try
+    {
+        throw CarNotFoundException();
+    }
+    catch (exception& e)
+    {
+        cout<<"Eroare: "<<e.what()<<endl;
+    }
+
+    cout<<endl;
+
+    try
+    {
+        throw CarException();
+    }
+    catch (exception& e)
+    {
+        cout<<"Eroare: "<<e.what()<<endl;
+    }
+
+    cout<<endl;
+
+    try
+    {
+        throw runtime_error("Runtime error occurred");
+    }
+    catch (exception& e)
+    {
+        cout<<"Caught exception: "<<e.what();
+        cout<<endl;
+        throw logic_error("Logic error occurred");
+    }
 
     return 0;
 }
+
+///Polimorfism la execuție în proiectul dat:
+/*
+    ->Apelul metodei afisare() în clasa Masina prin intermediul pointerului MesajAfisat* mesaj.
+    ->Apelul metodei afisare2() în clasa Showroom prin intermediul pointerului MesajAfisat* mesaj.
+    ->În clasa Showroom, în metoda adaugare_masina(), se primește un obiect de tipul clasei Automobil
+și se adaugă un pointer la acel obiect într-un array de pointeri de tipul clasei Masina.
+    ->În clasa Masina, în metoda getPret(), se suprascrie metoda din clasa de bază Automobil.
+*/
+
+
+///Upcasting în proiectul dat:
+/*
+    ->În metoda afisareMasini() din clasa Showroom, se apelează metoda afisare() a clasei Masina pe fiecare
+element din array-ul de pointeri de tipul Automobil* masini.
+    ->În clasa Start_Stop, se apelează metodele start() și stop() ale clasei AltAutomobil, deși obiectul este de fapt
+de tipul Start_Stop.
+    ->În metoda adaugare_masina() din clasa Showroom, se primește un pointer la un obiect de tipul Automobil și se adaugă
+un pointer la acel obiect într-un array de pointeri de tipul Masina.
+    ->În metoda getPretTotalMasiniNet() din clasa Showroom, se apelează metoda getPret() a clasei Automobil pe fiecare
+element din array-ul de pointeri de tipul Masina.
