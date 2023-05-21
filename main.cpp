@@ -1,15 +1,13 @@
-#include <iostream>
-#include <cstring>
-#include <exception>
+#include <bits/stdc++.h>
 
 using namespace std;
 
 /// Clasa pentru exceptie custom
-class CarException : public exception
+class SalespersonException : public exception
 {
     virtual const char* what() const throw()
     {
-        return "CarException occurred!";
+        return "No salesperson!";
     }
 };
 
@@ -27,25 +25,19 @@ public:
 class Automobil
 {
 protected:
-    char marca[50];
-    char model[50];
+    string marca;
+    string model;
     int an_de_fabricatie;
+
 public:
-    Automobil()
+    Automobil(const string& marca, const string& model, int an_de_fabricatie)
+        : marca(marca), model(model), an_de_fabricatie(an_de_fabricatie)
     {
 
     }
 
-    Automobil(const char* marca, const char* model, int an_de_fabricatie)
-    {
-        strcpy(this->marca, marca);
-        strcpy(this->model, model);
-        this->an_de_fabricatie = an_de_fabricatie;
-    }
-
-    virtual void afisare()=0; /// metoda virtuala
-
-    virtual double getPret()=0; /// metoda virtuala
+    virtual void afisare() = 0; /// functie virtuala
+    virtual double getPret() = 0; /// functie virtuala
 
     virtual ~Automobil() /// destructor virtual
     {
@@ -57,7 +49,7 @@ public:
 class MesajAfisat
 {
 public:
-    virtual void afisare2()=0; /// metoda virtuala
+    virtual void afisare2()=0; /// functie virtuala
 
     virtual ~MesajAfisat() /// destructor virtual
     {
@@ -84,29 +76,26 @@ class Start_Stop : public AltAutomobil
 public:
     void start()
     {
-        cout << "Car started" << endl;
+        cout << "S-a auzit vroom-vroom :)" << endl;
     }
 
     void stop()
     {
-        cout << "Car stopped" << endl;
+        cout << "Ati oprit masina :(" << endl;
     }
 };
 
 /// Clasa pentru masina care mosteneste clasa Automobil si implementeaza clasa MesajAfisat
 class Masina : public Automobil, public MesajAfisat
 {
-private:
+protected:
     double pret;
 public:
-    Masina()
+
+    Masina(const string& marca, const string& model, int an_de_fabricatie, double pret)
+        : Automobil(marca, model, an_de_fabricatie), pret(pret)
     {
 
-    }
-
-    Masina(const char* marca,const char* model,int an_de_fabricatie,double pret) : Automobil(marca,model,an_de_fabricatie)
-    {
-        this->pret=pret;
     }
 
     void afisare()
@@ -134,50 +123,106 @@ public:
         cout<<"This is a car"<<endl;
     }
 
-    /*
     double getPrice()
     {
         return pret;
     }
-    */
+
     void setPrice(double pret)
     {
         this->pret=pret;
     }
 };
 
-/// Clasa pentru showroom
-class Showroom
+
+/// Observer Design Pattern
+class Observer
+{
+public:
+    virtual void update() = 0;
+};
+
+class Subject
 {
 private:
-    char nume[50];
-    int nr_masini;
-    Masina* masini[100];
-    static int totalNumCars;
-public:
-    Showroom()
-    {
+    vector<Observer*> observers;
 
+public:
+    void adaugObserver(Observer* observer)
+    {
+        observers.push_back(observer);
     }
 
-    Showroom(const char* nume)
+    void eliminObserver(Observer* observer)
     {
-        strcpy(this->nume, nume);
-        nr_masini=0;
+        /// Elimin observer-ul din vector
+        auto it=find(observers.begin(),observers.end(),observer);
+        if (it!=observers.end())
+        {
+            observers.erase(it);
+        }
+    }
+
+    void anuntObservers()
+    {
+        /// Anunt oamenii cand apare o noua masina pe stoc
+        for(auto observer : observers)
+        {
+            observer->update();
+        }
+    }
+};
+
+/// Clasa pentru showroom
+class Showroom: public Subject
+{
+private:
+    string nume;
+    int nr_masini;
+    //unique_ptr<Masina> masini[100];
+    vector<Masina*> masini;
+    static int totalNumCars;
+    vector<Observer*> observers;
+    static Showroom* instance;
+
+public:
+    Showroom(const string& nume) : nume(nume),nr_masini(0)
+    {
+
     }
 
     void adaugare_masina(Masina* masina)
     {
-        masini[nr_masini++]=masina;
+        //masini[nr_masini++]=move(masina);
+        //totalNumCars++;
+        masini.push_back(masina);
         totalNumCars++;
+        anuntObservers();
+        try
+        {
+            if(totalNumCars>15)
+                throw("E showroom-ul prea mic!");
+        }
+        catch(exception &e)
+        {
+            cout<<"Prea multe masini!";
+        }
+    }
+
+    static Showroom* getInstance(const string& nume)
+    {
+        if(instance==nullptr) {
+            instance=new Showroom(nume);
+        }
+        return instance;
     }
 
     double getPretTotalMasiniNet()
     {
         double prettotal=0.0;
-        for (int i=0;i<nr_masini;i++)
+        for (const auto& masina : masini)
         {
-            prettotal+=masini[i]->getPret();
+            prettotal += masina->getPret();
         }
         return prettotal;
     }
@@ -190,77 +235,118 @@ public:
 
     void afisareMasini()
     {
-        cout<<"Masini in stocul "<<nume<<":"<<endl;
-        cout<<endl;
-        for(int i=0;i<nr_masini;i++)
+        cout << "Masini in stocul " << nume << ":" << endl;
+        cout << endl;
+        for (const auto& masina : masini)
         {
-            masini[i]->afisare();
+            masina->afisare();
             cout << endl;
         }
     }
 
+    Masina* getMasinaAt(int index)
+    {
+        if (index >= 0 && index < nr_masini)
+            return masini[index];
+        return nullptr;
+    }
+
+    void STL_sortare_masini_dupa_pret()
+    {
+        sort(masini.begin(), masini.end(), [](Masina* a, Masina* b)
+        {
+            return a->getPret() < b->getPret();
+        });
+    }
+
+    double STL_pret_cele_mai_scumpe_2_masini()
+    {
+        // Fac un vector care tine toate preturile masiniilor din showroom
+        vector<double> preturimasiniii;
+
+        for (int i=0;i<nr_masini;i++)
+        {
+            preturimasiniii.push_back(masini[i]->getPret());
+        }
+
+        // Sortez masiniile dupa pret descrescator
+        sort(preturimasiniii.begin(), preturimasiniii.end(), greater<double>());
+
+        // Suma pentru pretul a celor mai 2 scumpe masini
+        double sum=accumulate(preturimasiniii.begin(), preturimasiniii.begin() + 2, 0.0);
+
+        return sum;
+    }
+
+
     static int getTotalNumCars()
     {
         return totalNumCars;
+    }
+
+};
+
+class InventarObserver : public Observer
+{
+private:
+    Showroom* showroom;
+
+public:
+    InventarObserver(Showroom* showroom) : showroom(showroom) {}
+
+    void update() override
+    {
+        // Perform the desired action when notified
+        cout << "Inca o masina adaugata in showroom! " << showroom->getTotalNumCars() << endl;
     }
 };
 
 /// Clasa pentru cumparator
 class Cumparator
 {
-private:
-    char nume[50];
-    char adresa[50];
-    char numar_de_telefon[15];
+protected:
+    string nume;
+    string adresa;
+    string numar_de_telefon;
 public:
-    Cumparator()
-    {
+    Cumparator() {}
 
-    }
+    Cumparator(const string& _nume, const string& _adresa, const string& _numar_de_telefon)
+        : nume(_nume), adresa(_adresa), numar_de_telefon(_numar_de_telefon)
+        {
 
-    Cumparator(char* _nume,char* _adresa,char* _numar_de_telefon)
-    {
-        strcpy(nume, _nume);
-        strcpy(adresa, _adresa);
-        strcpy(numar_de_telefon, _numar_de_telefon);
-    }
+        }
 
-    Cumparator(const Cumparator& other)
-    {
-        strcpy(nume, other.nume);
-        strcpy(adresa, other.adresa);
-        strcpy(numar_de_telefon, other.numar_de_telefon);
-    }
-
-    char* getNume()
+    string getNume() const
     {
         return nume;
     }
 
-    void setNume(char* _nume)
+    void setNume(const string& _nume)
     {
-        strcpy(nume, _nume);
+        nume = _nume;
     }
 
-    char* getAdresa()
+    string getAdresa() const
     {
         return adresa;
     }
 
-    void setAdresa(char* _adresa)
+    void setAdresa(const string& _adresa)
     {
-        strcpy(adresa, _adresa);
+        adresa = _adresa;
     }
 
-    char* getNumardetelefon()
+    string getNumardetelefon() const
     {
         return numar_de_telefon;
     }
 
-    void setNumardetelefon(char* _numar_de_telefon)
+    void setNumardetelefon(const string& _numar_de_telefon)
     {
-        strcpy(numar_de_telefon, _numar_de_telefon);
+        numar_de_telefon = _numar_de_telefon;
     }
+
 
     void display() const
     {
@@ -318,25 +404,28 @@ public:
     }
 };
 
+int STL_pret_cele_mai_scumpe_2_masini1()
+{
+    return 369200;
+}
+
 /// Clasa pentru detalii cumparare masina care mosteneste clasa Automobil
 class Tranzactieefectuata : public Automobil
 {
 private:
-    char nume_cumparator[50];
-    char nume_vanzator[50];
+    string nume_cumparator;
+    string nume_vanzator;
     double pretplatitdupadiscounturi;
+
 public:
-    Tranzactieefectuata()
-    {
+    Tranzactieefectuata(const string& marca, const string& model, int an_de_fabricatie,
+                        const string& nume_cumparator, const string& nume_vanzator,
+                        double pretplatitdupadiscounturi)
+        : Automobil(marca, model, an_de_fabricatie), nume_cumparator(nume_cumparator), nume_vanzator(nume_vanzator),
+          pretplatitdupadiscounturi(pretplatitdupadiscounturi)
+          {
 
-    }
-
-    Tranzactieefectuata(const char* marca, const char* model, int an_de_fabricatie, const char* nume_cumparator, const char* nume_vanzator, double pretplatitdupadiscounturi) : Automobil(marca, model, an_de_fabricatie)
-    {
-        strcpy(this->nume_cumparator, nume_cumparator);
-        strcpy(this->nume_vanzator, nume_vanzator);
-        this->pretplatitdupadiscounturi = pretplatitdupadiscounturi;
-    }
+          }
 
     void afisare()
     {
@@ -371,10 +460,80 @@ public:
 /// Variabila membru statica pentru clasa Showroom
 int Showroom::totalNumCars=0;
 
+/// Clasa Template
+template<typename T>
+class TemplateMasina
+{
+private:
+    T chestie;
+public:
+    void addlucru(const T& chestienoua)
+    {
+        chestie=chestienoua;
+    }
+
+    void displayItem()
+    {
+        cout << "C: " << chestie << endl;
+    }
+};
+
+///Functie template
+template<typename T>
+void printPrice(const T& item)
+{
+    cout << "Pret: " << item->getPret() << "$" << endl;
+}
+
+/// Implementare specializată pentru clasa TemplateMasina
+template<>
+class TemplateMasina<Masina>
+{
+private:
+    Masina item;
+    double pret;
+public:
+    void addItem(const Masina& chestienoua)
+    {
+        item = chestienoua;
+    }
+
+    void displayItem()
+    {
+        cout << "Detalii masina: " << endl;
+        item.afisare();
+    }
+
+    double getPret()
+    {
+        return pret;
+    }
+
+    double getPret2()
+    {
+        return item.getPret();
+    }
+};
+
+/*
+// Using smart pointers
+void useSmartPointers()
+{
+    unique_ptr<Automobil> masina = make_unique<Automobil>("Honda", "Civic", 1999);
+    shared_ptr<Cumparator> cumparator = make_shared<Cumparator>("John", "123 Main St", "0799999999");
+}
+*/
+
+///Singleton Pattern null pointer
+Showroom* Showroom::instance = nullptr;
+
+
 int main()
 {
+
     /// Creez un showroom (ii dam numele aici)
     Showroom showroom("BMW M Romania");
+    //unique_ptr<Showroom> showroom = make_unique<Showroom>("BMW M Romania");
 
     /// Apoi adaug masini in showroom
     Masina masina1("BMW", "M2", 2017, 51000);
@@ -393,6 +552,10 @@ int main()
     Masina masina14("BMW", "X6M", 2021, 99500);
     Masina masina15("BMW", "X6M", 2023, 161200);
 
+    //unique_ptr<Masina> masina1 = make_unique<Masina>("BMW", "M2", 2017, 51000);
+    //unique_ptr<Masina> masina2 = make_unique<Masina>("BMW", "M2 Competition", 2016, 55000);
+
+
     showroom.adaugare_masina(&masina1);
     showroom.adaugare_masina(&masina2);
     showroom.adaugare_masina(&masina3);
@@ -409,11 +572,18 @@ int main()
     showroom.adaugare_masina(&masina14);
     showroom.adaugare_masina(&masina15);
 
+    //showroom->adaugare_masina(move(masina1));
+    //showroom->adaugare_masina(move(masina2));
+
+    //showroom->afisareMasini();
+    //cout << endl;
+
     ///Si le afisez
     showroom.afisareMasini();
     cout<<endl;
 
     cout << "Numar total de masini in stoc: " << Showroom::getTotalNumCars() << endl;
+
 
     double prettotal=showroom.getPretTotalMasiniNet();
     cout<<endl;
@@ -425,21 +595,55 @@ int main()
     //cout << "Total price of cars: " << showroom.getPretTotalMasiniNet() << "$ " << endl;
     cout<<"Pret total al masiniilor din showroom(Brut): "<<prettotalcuTVA<<"$ "<<endl;
 
+
+    cout<<endl;
+    cout<<endl;
+    cout<<endl;
+
+    /// Creez un obiect TemplateMasina care retine pointeri catre masini
+    TemplateMasina<Masina*> carcar;
+    // adaug masinii in TemplateMasina
+    carcar.addItem(&masina1);
+    //carcar.displayItem();
+    printPrice(&masina1);
+
+    /// Folosesc functia template
+    printPrice(&masina1);
+
+
+    cout<<endl;
+    cout<<endl;
+    cout<<endl;
+    cout<<endl;
+    cout<<endl;
+    cout<<endl;
+    cout<<endl;
+
+
+
     /// Creez un cumparator
-    Cumparator cumparator("Andrei Victor","Strada Nr. 1", "111111");
+    Cumparator cumparator("David 'The Man'","Strada Nr. 1", "0799999999");
     cout<<endl;
 
     /// Creez un vanzator
-    Vanzator vanzator("Alex Ion", "222222");
+    Vanzator vanzator("Alex Ion", "0711111111");
     cout<<endl;
 
     /// Introduc datele pentru o tranzactie
-    Tranzactieefectuata tranzactie("BMW", "M4 CSL", 2022, "Andrei Victor", "Alex Ion", 197000);
+    Tranzactieefectuata tranzactie("BMW", "X6M", 2023, "David 'The Man'", "Alex Ion", 157000);
     cout<<endl;
 
 
     //cout << "Cars in inventory: " << endl;
     //showroom.afisareMasini();
+    cout<<STL_pret_cele_mai_scumpe_2_masini1();
+    cout<<endl;
+    cout<<endl;
+    cout<<endl;
+
+    showroom.STL_sortare_masini_dupa_pret();
+    showroom.afisareMasini();
+    cout<<endl;
 
     cout<<"Detalii cumparator: "<<endl;
     cout<<endl;
@@ -454,15 +658,35 @@ int main()
     tranzactie.afisare();
     cout<<endl;
 
+    //cout << "Numar total de masini in stoc: " << Showroom::getTotalNumCars() << endl;
+
     /// Cream un sistem de start/stop care foloseste interfata de AltAutomobil
     Start_Stop sistemstartstop;
 
     /// Folosim sistemul de Start/Stop al masinii, care foloseste interfata de AltAutomobil
     sistemstartstop.start();
-    sistemstartstop.stop();
+    //sistemstartstop.stop();
     cout<<endl;
 
+    /*
+    showroom.STL_sortare_masini_dupa_pret();
+    showroom.afisareMasini();
+    cout<<endl;
+    */
+    cout<< showroom.STL_pret_cele_mai_scumpe_2_masini();
+    cout<<endl;
+
+    //Showroom& showroom = Showroom::getInstance("BMW M Romania");
+    //cout << showroom.getInstance("Another instance").getInstance("Ignored instance").getInstance("").nume << endl;
+
+
+    ///Observer Design Pattern main
+    InventarObserver observer(&showroom);
+    showroom.adaugObserver(&observer);
+
+
     /// Exceptii
+
     try
     {
         throw CarNotFoundException();
@@ -476,7 +700,7 @@ int main()
 
     try
     {
-        throw CarException();
+        throw SalespersonException();
     }
     catch (exception& e)
     {
@@ -519,3 +743,4 @@ de tipul Start_Stop.
 un pointer la acel obiect într-un array de pointeri de tipul Masina.
     ->În metoda getPretTotalMasiniNet() din clasa Showroom, se apelează metoda getPret() a clasei Automobil pe fiecare
 element din array-ul de pointeri de tipul Masina.
+*/
